@@ -1,31 +1,88 @@
-This is a simple kernel module written to demonstrate the speed of the PRNG
-currently in OpenZFS's Linux SPL.
+This is a simple kernel module written to demonstrate different speeds
+of PRNG and CSPRNG implementations for or within OpenZFS's Linux SPL.
 
-This module was written on Gentoo Linux against Linux 5.16.14-gentoo-x86_64,
-but should build against any recent kernel (Linux 5.0 and later) on any
-distribution with the kernel toolchain, headers and build system installed.
-Here is a sample session:
+The module was firstly written by Richard Yao on Gentoo Linux and
+compiled against Linux 5.16.14-gentoo-x86_64, but should build against
+any recent x86_64 kernel on any distribution with the kernel toolchain,
+headers and build system installed.
 
-	$ cd /path/to/poc_dev
-	$ make
-	make -C /lib/modules/5.16.14-gentoo-x86_64/build M=/home/richard/poc-urandom modules
-	make[1]: Entering directory '/usr/src/linux-5.16.14-gentoo'
-	warning: the compiler differs from the one used to build the kernel
-	  The kernel was built by: x86_64-pc-linux-gnu-gcc (Gentoo 11.3.0 p4) 11.3.0
-	  You are using:           gcc (Gentoo 11.3.0 p4) 11.3.0
-	make[1]: Leaving directory '/usr/src/linux-5.16.14-gentoo'
-	$ sudo insmod poc_char.ko
-	$ time dd if=/dev/urandom-fast bs=1M count=1000 of=/dev/null
-	1000+0 records in
-	1000+0 records out
-	1048576000 bytes (1.0 GB, 1000 MiB) copied, 0.333377 s, 3.1 GB/s
+The BLAKE3 code uses SSE41 instructions.
 
-	real    0m0.334s
-	user    0m0.000s
-	sys     0m0.332s
-	$ make clean
-	make -C /lib/modules/5.16.14-gentoo-x86_64/build M=/home/richard/poc-urandom clean
-	make[1]: Entering directory '/usr/src/linux-5.16.14-gentoo'
-	  CLEAN   /home/richard/poc-urandom/Module.symvers
-	make[1]: Leaving directory '/usr/src/linux-5.16.14-gentoo'
-	$ sudo rmmod poc_char.ko
+Sample Session on this system:
+
+```
+[mcmilk@debian-x64 ~/src/poc-urandom.tr]$ make
+make -C /lib/modules/5.10.0-18-amd64/build M=/home/sva/src/poc-urandom.tr modules
+make[1]: Entering directory '/usr/src/linux-headers-5.10.0-18-amd64'
+  CC [M]  /home/sva/src/poc-urandom.tr/mod_cs128p.o
+  LD [M]  /home/sva/src/poc-urandom.tr/poc_cs128p.o
+  CC [M]  /home/sva/src/poc-urandom.tr/mod_cs256pp.o
+  LD [M]  /home/sva/src/poc-urandom.tr/poc_cs256pp.o
+  CC [M]  /home/sva/src/poc-urandom.tr/blake3.o
+  CC [M]  /home/sva/src/poc-urandom.tr/blake3_generic.o
+  CC [M]  /home/sva/src/poc-urandom.tr/blake3_impl.o
+  CC [M]  /home/sva/src/poc-urandom.tr/blake3_x86-64.o
+  AS [M]  /home/sva/src/poc-urandom.tr/blake3_sse41.o
+  AS [M]  /home/sva/src/poc-urandom.tr/blake3_avx2.o
+  CC [M]  /home/sva/src/poc-urandom.tr/mod_blake3.o
+  LD [M]  /home/sva/src/poc-urandom.tr/poc_blake3.o
+  MODPOST /home/sva/src/poc-urandom.tr/Module.symvers
+  CC [M]  /home/sva/src/poc-urandom.tr/poc_blake3.mod.o
+  LD [M]  /home/sva/src/poc-urandom.tr/poc_blake3.ko
+  CC [M]  /home/sva/src/poc-urandom.tr/poc_cs128p.mod.o
+  LD [M]  /home/sva/src/poc-urandom.tr/poc_cs128p.ko
+  CC [M]  /home/sva/src/poc-urandom.tr/poc_cs256pp.mod.o
+  LD [M]  /home/sva/src/poc-urandom.tr/poc_cs256pp.ko
+make[1]: Leaving directory '/usr/src/linux-headers-5.10.0-18-amd64'
+```
+
+Linux debian-x64 5.10.0-18-amd64 #1 SMP Debian 5.10.140-1 (Ryzen 7 5800X)
+
+```
+[mcmilk@debian-x64 ~/src/poc-urandom.tr]$ ./test-it.sh
+  cs128p    32: 1.00MiB 0:00:00 [19.1MiB/s] [===================>] 100%
+ cs256pp    32: 1.00MiB 0:00:00 [19.2MiB/s] [===================>] 100%
+  blake3    32: 1.00MiB 0:00:00 [26.9MiB/s] [===================>] 100%
+   linux    32: 1.00MiB 0:00:00 [24.6MiB/s] [===================>] 100%
+  cs128p   128: 8.00MiB 0:00:00 [75.6MiB/s] [===================>] 100%
+ cs256pp   128: 8.00MiB 0:00:00 [75.8MiB/s] [===================>] 100%
+  blake3   128: 8.00MiB 0:00:00 [97.3MiB/s] [===================>] 100%
+   linux   128: 8.00MiB 0:00:00 [81.4MiB/s] [===================>] 100%
+  cs128p   512: 64.0MiB 0:00:00 [ 294MiB/s] [===================>] 100%
+ cs256pp   512: 64.0MiB 0:00:00 [ 283MiB/s] [===================>] 100%
+  blake3   512: 64.0MiB 0:00:00 [ 292MiB/s] [===================>] 100%
+   linux   512: 64.0MiB 0:00:00 [ 219MiB/s] [===================>] 100%
+  cs128p  2048:  512MiB 0:00:00 [1.01GiB/s] [===================>] 100%
+ cs256pp  2048:  512MiB 0:00:00 [1.01GiB/s] [===================>] 100%
+  blake3  2048:  512MiB 0:00:00 [ 586MiB/s] [===================>] 100%
+   linux  2048:  512MiB 0:00:01 [ 374MiB/s] [===================>] 100%
+  cs128p  8192: 4.00GiB 0:00:01 [2.64GiB/s] [===================>] 100%
+ cs256pp  8192: 4.00GiB 0:00:01 [2.51GiB/s] [===================>] 100%
+  blake3  8192: 4.00GiB 0:00:05 [ 779MiB/s] [===================>] 100%
+   linux  8192: 4.00GiB 0:00:09 [ 454MiB/s] [===================>] 100%
+[mcmilk@debian-x64 ~/src/poc-urandom.tr]$
+```
+
+Linux debian-x64 5.10.0-13-amd64 #1 SMP Debian 5.10.106-1 (i3-1005G1)
+```
+  cs128p    32: 1,00MiB 0:00:00 [11,7MiB/s] [===================>] 100%
+ cs256pp    32: 1,00MiB 0:00:00 [11,8MiB/s] [===================>] 100%
+  blake3    32: 1,00MiB 0:00:00 [16,2MiB/s] [===================>] 100%
+   linux    32: 1,00MiB 0:00:00 [12,0MiB/s] [===================>] 100%
+  cs128p   128: 8,00MiB 0:00:00 [45,3MiB/s] [===================>] 100%
+ cs256pp   128: 8,00MiB 0:00:00 [46,6MiB/s] [===================>] 100%
+  blake3   128: 8,00MiB 0:00:00 [58,5MiB/s] [===================>] 100%
+   linux   128: 8,00MiB 0:00:00 [31,0MiB/s] [===================>] 100%
+  cs128p   512: 64,0MiB 0:00:00 [ 173MiB/s] [===================>] 100%
+ cs256pp   512: 64,0MiB 0:00:00 [ 178MiB/s] [===================>] 100%
+  blake3   512: 64,0MiB 0:00:00 [ 180MiB/s] [===================>] 100%
+   linux   512: 64,0MiB 0:00:00 [65,9MiB/s] [===================>] 100%
+  cs128p  2048:  512MiB 0:00:00 [ 642MiB/s] [===================>] 100%
+ cs256pp  2048:  512MiB 0:00:00 [ 646MiB/s] [===================>] 100%
+  blake3  2048:  512MiB 0:00:01 [ 388MiB/s] [===================>] 100%
+   linux  2048:  512MiB 0:00:05 [86,8MiB/s] [===================>] 100%
+  cs128p  8192: 4,00GiB 0:00:02 [1,84GiB/s] [===================>] 100%
+ cs256pp  8192: 4,00GiB 0:00:02 [1,75GiB/s] [===================>] 100%
+  blake3  8192: 4,00GiB 0:00:07 [ 540MiB/s] [===================>] 100%
+   linux  8192: 4,00GiB 0:00:42 [96,2MiB/s] [===================>] 100%
+```

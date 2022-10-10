@@ -37,10 +37,18 @@ extern "C" {
 #include <linux/string.h>
 #include <linux/spinlock.h>
 
-#include "simd_x86.h"
-
 #define  atomic_swap_32(v, x)  atomic_xchg((atomic_t *)(v), x)
 #define UINT32_MAX (0xffffffffu)
+
+#include <asm/cpufeature.h>
+#include <asm/fpu/api.h>
+#include <asm/fpu/internal.h>
+
+#define	kfpu_allowed()		1
+#define	kfpu_init()		0
+#define	kfpu_fini()		((void) 0)
+#define	kfpu_begin()		kernel_fpu_begin()
+#define	kfpu_end()		kernel_fpu_end()
 
 /*
  * Methods used to define BLAKE3 assembler implementations

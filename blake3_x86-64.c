@@ -139,13 +139,8 @@ static void blake3_hash_many_sse41(const uint8_t * const *inputs,
 
 static boolean_t blake3_is_sse41_supported(void)
 {
-#if defined(__x86_64)
-	return (kfpu_allowed() && zfs_sse4_1_available());
-#elif defined(__PPC64__) && defined(__linux__)
-	return (kfpu_allowed() && zfs_vsx_available());
-#else
-	return (kfpu_allowed());
-#endif
+	// XXX only testing XXX ;)
+	return (1);
 }
 
 const blake3_ops_t blake3_sse41_impl = {
@@ -176,8 +171,8 @@ static void blake3_hash_many_avx2(const uint8_t * const *inputs,
 
 static boolean_t blake3_is_avx2_supported(void)
 {
-	return (kfpu_allowed() && zfs_sse4_1_available() &&
-	    zfs_avx2_available());
+	// XXX only testing XXX ;)
+	return (1);
 }
 
 const blake3_ops_t blake3_avx2_impl = {

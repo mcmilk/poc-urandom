@@ -123,13 +123,13 @@ poc_read(struct file *filep, char *buffer, size_t len, loff_t *offset)
 	xp = get_cpu_ptr(spl_pseudo_entropy);
 
 	for (i = 0; i < len; i += sizeof (uint64_t)) {
-		*(uint64_t *)buf = spl_rand_next(xp);
+		*(uint64_t *)(buf + i) = spl_rand_next(xp);
 	}
 
 	put_cpu_ptr(spl_pseudo_entropy);
 
 	while (left != 0) {
-		left = copy_to_user(buffer + copied, buf + copied, len);
+		left = copy_to_user(buffer + copied, buf + copied, len - copied);
 		copied = len - left;
 	}
 
@@ -223,6 +223,5 @@ cleanup_module(void)
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Richard Yao");
-MODULE_DESCRIPTION("Proof of Concept to demonstrate the speed of "
-	"the PRNG in OpenZFS");
+MODULE_DESCRIPTION("RFC PRNG xorshift128+ for OpenZFS");
 MODULE_VERSION("1.0");

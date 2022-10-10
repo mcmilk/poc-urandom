@@ -93,6 +93,7 @@ static void blake3_impl_init(void)
 	}
 	blake3_supp_impls_cnt = c;
 
+
 	/* first init generic impl, may be changed via set_fastest() */
 	memcpy(&blake3_fastest_impl, blake3_impls[0],
 	    sizeof (blake3_fastest_impl));
